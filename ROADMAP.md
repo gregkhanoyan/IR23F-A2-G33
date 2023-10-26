@@ -58,6 +58,7 @@ How We Take a W On This Project
       - Need to find a way to calculate word number without HTML markup code
       - can def use some library for this (explore BeautifulSoup)
       - Word Length count printed?
+      - currently gets an invalid 404 page, which technically is the longest, but we need to filter "invalid" pages by our created definition
   - Determine the 50 most common words in the entire set of pages crawled under these domains. Submit list in order of frequency
       - Use Assignment 1 Code
       - Ignore "English Stop Words: https://www.ranks.nl/stopwords"
