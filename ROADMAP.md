@@ -50,14 +50,8 @@ How We Take a W On This Project
   ***MISC.***
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
       - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-  - Check for HTML Response codes other than 200 (e.g. 403 Forbidden)
-  - Deal with duplicate links in 'extract_next_links(url, resp)' function
-      - ics.uci.edu
-      - ics.uci.edu/
   - **Page Similarity** (ASCII?) + **AVOID TRAPS!!!!!!!!!!!**
-  - Longest page URL being invalid - why is it considering this if it throws a 404 error?
-  
-  - check for head being empty (**timed out**)
+    - **DIVERT FROM TIMEOUTS - ENFORCE PROGRAM TO DO THIS**
   - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
   - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
       - Detect and avoid crawling very large files, esp. if they have low information content
