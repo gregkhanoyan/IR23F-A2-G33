@@ -48,17 +48,9 @@ How We Take a W On This Project
   # NEED TO DO:
 
   ***MISC.***
-  - Verify web page word count
-  - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-  - **FIND A WAY TO CALCULATE DELIVERABLE STATISTICS INDEPENDENT OF SCRAPER.PY?**
-  - Check for HTML Response codes other than 200 (e.g. 403 Forbidden)
-  - Deal with duplicate links in 'extract_next_links(url, resp)' function
-      - ics.uci.edu
-      - ics.uci.edu/
-  - **Page Similarity** (ASCII?) + **AVOID TRAPS!!!!!!!!!!!**
-  - Longest page URL being invalid - why is it considering this if it throws a 404 error?
-  - **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
-  - check for head being empty (**timed out**)
+  -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
+      - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
+      - **DIVERT FROM TIMEOUTS - ENFORCE PROGRAM TO DO THIS**
   - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
   - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
       - Detect and avoid crawling very large files, esp. if they have low information content
@@ -75,16 +67,9 @@ How We Take a W On This Project
  # Deliverables:
  
   - Determine how many unique pages we found (unique = URL - fragment)
-      - should be easy, since we already defragment in 'extract_next_links(url, resp)'
   - Determine the longest page in terms of the number of words (HTML markup doesn't count as words)
-      - Need to find a way to calculate word number without HTML markup code
-      - can def use some library for this (explore BeautifulSoup)
-      - Word Length count printed?
-  - Determine the 50 most common words in the entire set of pages crawled under these domains. Submit list in order of frequency
-      - Use Assignment 1 Code
-      - Ignore "English Stop Words: https://www.ranks.nl/stopwords"
-  - Determine how many subdomains we found in the 'ics.uci.edu' domain. Submit list of subdomains ordered alphabetically and 
-  number of unique pages detected in each subdomain. 
+  - Determine the 50 most common words in the entire set of pages crawled under these domains. Submit list in order of frequency.
+  - Determine how many subdomains we found in the 'ics.uci.edu' domain. Submit list of subdomains ordered alphabetically and number of unique pages detected in each subdomain. 
       - Content should be like so: {URL, number} e.g. {http://vision.ics.edu, 10}
   
   **Politeness**      
