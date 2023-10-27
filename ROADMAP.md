@@ -48,7 +48,6 @@ How We Take a W On This Project
   # NEED TO DO:
 
   ***MISC.***
-  - **50 MOST COMMON WORDS** - through all the websites 
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
       - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
   - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
