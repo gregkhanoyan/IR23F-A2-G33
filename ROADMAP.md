@@ -46,20 +46,10 @@ How We Take a W On This Project
   We also print whether or not a link is valid and can be crawled.
 
   # NEED TO DO:
-
-  ***MISC.***
+  
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
-      - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-  - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
-  - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
-      - Detect and avoid crawling very large files, esp. if they have low information content
-      - Decide and discuss a reasonable definition for low information page + defend it in the TA talk
-  - - Detect and avoid deal URL's that return a 200 status but no data
-      - https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html could be useful here
   - Detect redirects and if the page redirects your crawler, index the redirected content
-  -  Ensure we send the server a request with ASCII URL
-      - make sure that the URL being requested is ics.uci.edu, not <a href="ics.uci.edu">
-  - tmux
+  - Run on **openlab** with **tmux**
 
 
  # Deliverables:
