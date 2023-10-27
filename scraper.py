@@ -153,19 +153,6 @@ def scraper(url, resp):
 def extract_next_links(url, resp):
     link_list = []
 
-    parsed_url = urlparse(url)
-    domain = parsed_url.netloc
-    path = parsed_url.path
-    robots_url = f"http://{domain}/robots.txt"
-    robots_subdomain_url = f"http://{domain}{path}/robots.txt"
-    print(robots_subdomain_url)
-
-    if robots_url not in domainSet:
-        domainSet.add(robots_url)
-        
-    parser = RobotExclusionRulesParser()
-    parser.fetch(robots_url)
-
     # checking if we actually got the page
     # do we have to check utf-8 encoding?
     # print(resp.status_code)
@@ -208,7 +195,21 @@ def extract_next_links(url, resp):
                     # print("UNQUOTED: ", url_joined)
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
-                    if is_valid(final_url) and not_similar(final_url):                  
+                    if is_valid(final_url) and not_similar(final_url):
+                        parsed_url = urlparse(final_url)
+                        domain = parsed_url.netloc
+                        path = parsed_url.path
+                        robots_url = f"http://{domain}/robots.txt"
+                        robots_subdomain_url = f"http://{domain}{path}/robots.txt"
+                        print(robots_subdomain_url)
+
+                        if robots_url not in domainSet:
+                            domainSet.add(robots_url)
+                            
+
+                        parser = RobotExclusionRulesParser()
+                        parser.fetch(robots_url)
+                    
                         if parser.is_allowed(user_agent, final_url): # tab next line
                             link_list.append(final_url)
 
