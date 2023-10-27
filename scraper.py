@@ -1,6 +1,7 @@
 import re
+# comment out requests when running in openlab
 import requests
-from urllib.parse import urlparse, urljoin, urldefrag
+from urllib.parse import urlparse, urljoin, urldefrag, unquote
 from bs4 import BeautifulSoup
 from collections import Counter
 from difflib import SequenceMatcher
@@ -20,7 +21,9 @@ subdomainCounts = {}
 # wordCounter will hold number of times a certain word is read
 wordCounter = Counter()
 
+
 # list of stopwords
+# why are there 2 equals lmao
 stopWords = stopwords = set([
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", 
     "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", 
@@ -44,14 +47,22 @@ stopWords = stopwords = set([
 
 def scraper(url, resp):
     if is_valid(url):
-        print("Testing URL: " , url)
-        try:
-            resp = requests.get(url)
-        except:
-            print("Timeout")
+        if resp.status_code == 408:
+            print("timeout")
+            return
+        # print("Testing URL: " , url)
+        # try:
+        #     resp = requests.get(url)
+        # except:
+        #     print("Timeout")
 
-        # Store number of unique pages
+        # Fixes URL's having / at the end being different from not
+
+        url = url.rstrip("/")
+
+        # Function call to extract_next_links in order to retrieve hyperlinks/pages
         links = extract_next_links(url, resp)
+        # print(links)
 
         if links is not None:
             for link in links:
@@ -59,10 +70,16 @@ def scraper(url, resp):
                     linkSet.add(link)
         else:
             print("No more links here! Moving on...")
+            # return
 
-        links.remove(url)
+        # print("LINK LENGTH: ", len(links))
 
-        print("Extracted Links:")
+        # why do we do this?
+        if links is not None and url in links:
+            links.remove(url)
+
+        # print("Extracted Links:")
+
         if(links is not None):
             linkSet.update(links)
             # Find number of unique pages
@@ -70,26 +87,27 @@ def scraper(url, resp):
             print("Number of Unique Pages: ", uniquePages)
         
         # Store word count for the current URL
-        content = resp.text
-        pageWordCounts[url] = count_words(content)
+        if resp.text and resp.text is not None:
+            content = resp.text
+            pageWordCounts[url] = count_words(content)
 
-        # Update wordCounter for each tokenized word, not including stop words
-        tokens = tokenize(content)
-        for word in tokens:
-            if word not in stopWords:
-                wordCounter[word] += 1
+            # Update wordCounter for each tokenized word, not including stop words
+            tokens = tokenize(content)
+            for word in tokens:
+                if word not in stopWords:
+                    wordCounter[word] += 1
 
-        parsed_url = urlparse(url)
-        if parsed_url.netloc.endswith('ics.uci.edu'):
+        # parsed_url = urlparse(url)
+        # if parsed_url.netloc.endswith('ics.uci.edu'):
             
-            # Extract the subdomain part
-            subdomain = parsed_url.netloc.rsplit('.', 2)[0]
+        #     # Extract the subdomain part
+        #     subdomain = parsed_url.netloc.rsplit('.', 2)[0]
 
-            if subdomain == 'ics':
-                subdomain = parsed_url.netloc.rsplit('.', 3)[1]
+        #     if subdomain == 'ics':
+        #         subdomain = parsed_url.netloc.rsplit('.', 3)[1]
             
-            # Increment count for the subdomain or initialize it if it doesn't exists
-            subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
+        #     # Increment count for the subdomain or initialize it if it doesn't exists
+        #     subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
 
         # if links is not None:
             # for link in links:
@@ -103,31 +121,37 @@ def scraper(url, resp):
 
     # Find the url of the longest page in terms of words count
     if pageWordCounts:
+        # how does this work?
         longest_page_url = max(pageWordCounts, key=pageWordCounts.get)
-        print("Longest page URL:", longest_page_url)
-        print("Number of words:", pageWordCounts[longest_page_url])
+        print("Longest Page URL: ", longest_page_url, " - with ", pageWordCounts[longest_page_url], " words!")
 
     # Get the 50 most common words
     most_common_words = wordCounter.most_common(50)
-    print("50 most common words:", most_common_words)
+    print("50 Most Common Words:", most_common_words)
 
     # Print out the counts for each subdomain
     sorted_subdomains = sorted(subdomainCounts.items(), key=lambda x: x[0])  # Sort by subdomain name
     for subdomain, count in sorted_subdomains:
         print(f"http://{subdomain}.ics.uci.edu, {count}")
 
-    # returns a list of links
-    return [link for link in linkSet if is_valid(link)]
-    # return [link for link in links if is_valid(link)]
+    links_return = []
 
+    for link in linkSet:
+        if is_valid(link):
+            links_return.append(link)
+
+    # returns a list of links
+    return links_return
+    # return [link for link in links if is_valid(link)]
+    
 def extract_next_links(url, resp):
     link_list = []
-
 
     # checking if we actually got the page
     # do we have to check utf-8 encoding?
     # print(resp.status_code)
     # print(resp.headers)
+    # print(resp.status_code)
     if resp.status_code == 200:
         try:
             # use BeautifulSoup library to parse the HTML content of the page
@@ -147,23 +171,27 @@ def extract_next_links(url, resp):
 
             # print("Parsed Content: ", soup.prettify())
 
-
-
             # in the HTML, we want to find all '<a>' tags and extract the link, the 'href'
             for curr in soup.find_all('a'):
                 link = curr.get('href')
                 if link:
+                    
                     # we then use 'urllib.parse: urljoin' in order to combine the relative URL's with our base URL in order to get our final URL
                     url_joined = urljoin(url, link)
+                    url_joined = url_joined.rstrip("/")
+                    # print("QUOTED: ", url_joined)
+                    url_joined = unquote(url_joined)
+                    # print("UNQUOTED: ", url_joined)
 
                     # Use 'urllibe.parse: urldefrag' to remove the fragment, as in this assignment we ignore the fragment 
                     if "#" in url_joined:
                         url_joined = urldefrag(url_joined).url
+                        
                    
                     final_url = url_joined
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
-                    if is_valid(final_url):
+                    if is_valid(final_url) and not_similar(final_url):
                         link_list.append(final_url)
 
         except Exception as e:
@@ -175,13 +203,14 @@ def extract_next_links(url, resp):
 
     return link_list
 
-
 # FUNCTION: is_valid(url) - checks the validity of a URL:str passed in - returns a boolean True or False
 def is_valid(url):
     try:
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
+        
+        url = unquote(url)
 
         # List of disallowed file extensions
         invalid = [
@@ -191,7 +220,7 @@ def is_valid(url):
             "ps", "eps", "tex", "ppt", "pptx", "doc", "docx", "xls", "xlsx", "names",
             "data", "dat", "exe", "bz2", "tar", "msi", "bin", "7z", "psd", "dmg", "iso",
             "epub", "dll", "cnf", "tgz", "sha1", "thmx", "mso", "arff", "rtf", "jar", "csv",
-            "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz"
+            "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz" , "img", "mpg"
         ]
 
         # List of valid domains we can crawl in
@@ -227,7 +256,6 @@ def tokenize(content):
 
     return cleanTokens
 
-
 def count_words(content):
     # Strip HTML markup
     soup = BeautifulSoup(content, 'html.parser')
@@ -237,7 +265,34 @@ def count_words(content):
     words = re.findall(r'\w+', newContent)
     return len(words)
 
+def not_similar(url):
+    flag = True
+    # print("URL OG: ", url)
+    parsed = urlparse(url)
+    # print("Parsed URL OG", parsed)
 
+    for other_url in linkSet:
+        # print("other_url: ", other_url)
+        other_parsed = urlparse(other_url)
+        # print("Other Parsed: ", other_parsed)
+
+        domain_similarity = SequenceMatcher(None, parsed.netloc, other_parsed.netloc).ratio()
+        # print(domain_similarity)
+        path_similarity = SequenceMatcher(None, parsed.path, other_parsed.path).ratio()
+        # print(path_similarity)
+        query_similarity = SequenceMatcher(None, parsed.query, other_parsed.query).ratio()
+        # print(query_similarity)
+
+        if (domain_similarity == 1 and path_similarity > 0.6):
+            flag = False
+            return flag
+            # print("Similar")
+        else:
+            flag = True
+            # print("Not Similar")
+    return flag
+
+# LOCAL DRIVER
 
 resp = requests.get(seed)
 urlsss = scraper(seed, resp)
@@ -246,108 +301,44 @@ print("URL's Scraped From Seed")
 for i in urlsss:
     print(i)
 
+# url1 = "https://wics.ics.uci.edu/events/2022-01-28/"
+# url2 = "https://wics.ics.uci.edu/events/2022-02-19"
+# url1 = "https://ics.uci.edu/happening/news/?filter%5Baffiliation_posts%5D=1990"
+# url2 = "https://ics.uci.edu/happening/news/?filter%5Bresearch_areas_ics%5D=1994"
+# url1 = "https://grape.ics.uci.edu/wiki/public/timeline?from=2019-03-13T22%3A33%3A25-07%3A00&precision=second"
+# url2 = "https://grape.ics.uci.edu/wiki/public/timeline?from=2019-01-09T23%3A07%3A19-08%3A00&precision=second"
 
-# ------------------------------------------------------------------- OLD DRIVER CODE - KEEP JUST IN CASE----------------------------------------------------------------------------
+# url1_parsed = urlparse(url1)
+# url2_parsed = urlparse(url2)
 
-# test_urls = [
-#     # These are all for validity checker
-#     # "https://www.ics.uci.edu/page",
-#     # "http://cs.uci.edu/page",
-#     # "https://informatics.uci.edu/page",
-#     # "https://stat.uci.edu/page",
-#     # "https://www.google.com/page",
-#     # "ftp://invalid-url.com/ftp-page",
-#     # "https://www.linkedin.com/feed/",
-#     # "https://drive.google.com/drive/u/0/my-drive",
-#     # "https://www.youtube.com/watch?v=_ITiwPMUzho&ab_channel=LofiGhostie",
-#     # "https://www.youtube.com/watch?v=TUEju_i3oWE&ab_channel=Insomniac",
-#     # "https://github.com/gregkhanoyan/IR23F-A2-G33#things-to-keep-in-mind",
-#     # "https://canvas.eee.uci.edu/courses/58552/assignments/1243743",
-#     # These are actual links that can be crawled
-#     # "https://ics.uci.edu/academics/undergraduate-academic-advising/",
-#     # "https://ics.uci.edu/academics/undergraduate-academic-advising/change-of-major/",
-#     # "https://grape.ics.uci.edu/wiki/public/wiki/cs122b-2019-winter",
+# domain = SequenceMatcher(None, url1_parsed.netloc, url2_parsed.netloc).ratio()
+# path = SequenceMatcher(None, url1_parsed.path, url2_parsed.path).ratio()
+# query = SequenceMatcher(None, url1_parsed.query, url2_parsed.query).ratio()
 
-#     # "http://www.ics.uci.edu",
-#     "https://sami.ics.uci.edu/"
+# print("DOMAIN SIMILARITY: " , domain)
+# print("PATH SIMILARITY: " , path)
+# print("QUERY SIMILARITY: " , query)
 
-# ]
+# url3 = unquote(url1)
+# url4 = unquote(url2)
 
-# for url in test_urls:
-#     if is_valid(url):
-#         print("Testing URL: " , url)
-#         try:
-#             resp = requests.get(url)
-#         except:
-#             print("Timeout")
-#         # Store number of unique pages
-#         links = extract_next_links(url, resp)
+# url3_parsed = urlparse(url3)
+# url4_parsed = urlparse(url3)
+# print(url3_parsed)
+# print(url4_parsed)
 
-#         if links is not None:
-#             for link in links:
-#                 if link not in linkSet:
-#                     test_urls.append(link)
-#         else:
-#             print("No more links here! Moving on...")
+# domain = SequenceMatcher(None, url3_parsed.netloc, url4_parsed.netloc).ratio()
+# path = SequenceMatcher(None, url3_parsed.path, url4_parsed.path).ratio()
+# query = SequenceMatcher(None, url3_parsed.query, url4_parsed.query).ratio()
 
-#         test_urls.remove(url)
+# print("DOMAIN SIMILARITY: " , domain)
+# print("PATH SIMILARITY: " , path)
+# print("QUERY SIMILARITY: " , query)
 
-#         print("Extracted Links:")
-#         if(links is not None):
-#             linkSet.update(links)
-#             # Find number of unique pages
-#             uniquePages = len(linkSet)
-#             print("Number of Unique Pages: ", uniquePages)
+# linkSet.add(url4)
+# print(linkSet)
 
-
-#         # Store word count for the current URL
-#         content = resp.text
-#         pageWordCounts[url] = count_words(content)
-
-#         # Update wordCounter for each tokenized word, not including stop words
-#         tokens = tokenize(content)
-#         for word in tokens:
-#             if word not in stopWords:
-#                 wordCounter[word] += 1
-
-#         parsed_url = urlparse(url)
-#         if parsed_url.netloc.endswith('ics.uci.edu'):
-#             # Extract the subdomain part
-#             subdomain = parsed_url.netloc.rsplit('.', 2)[0]
-
-#             if subdomain == 'ics':
-#                 subdomain = parsed_url.netloc.rsplit('.', 3)[1]
-            
-#             # Increment count for the subdomain or initialize it if it doesn't exists
-#             subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
-
-#         # if links is not None:
-#             # for link in links:
-#         # if linkSet is not None:
-#         #     for link in linkSet:
-#         #         print(link)
-#     else:
-#         print(url, " is not a valid URL for crawling.")
-
-
-
-# # Find the url of the longest page in terms of words count
-# if pageWordCounts:
-#     longest_page_url = max(pageWordCounts, key=pageWordCounts.get)
-#     print("Longest page URL:", longest_page_url)
-#     print("Number of words:", pageWordCounts[longest_page_url])
-
-# # Get the 50 most common words
-# most_common_words = wordCounter.most_common(50)
-# print("50 most common words:", most_common_words)
-
-# # Print out the counts for each subdomain
-# sorted_subdomains = sorted(subdomainCounts.items(), key=lambda x: x[0])  # Sort by subdomain name
-# for subdomain, count in sorted_subdomains:
-#     print(f"http://{subdomain}.ics.uci.edu, {count}")
-
-# for url in test_urls:
-#     if is_valid(url):
-#         print(f"{url} is a valid URL for crawling.")
-#     else:
-#         print(f"{url} is not a valid URL for crawling.")
+# if not_similar(url3):
+#     print("The URL's are not similar!")
+# else:
+#     print("The URL's are too similar! Disregarding!")
