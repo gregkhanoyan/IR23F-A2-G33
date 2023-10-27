@@ -8,6 +8,7 @@ from difflib import SequenceMatcher
 from robotexclusionrulesparser import RobotExclusionRulesParser
 
 seed = "https://ics.uci.edu/" 
+# seed = "https://summeracademy.ics.uci.edu/?page_id=163" 
 # seed = "https://sami.ics.uci.edu/research.html"
 
 # linkSet will transform list of links into a set to remove duplicates
@@ -53,15 +54,21 @@ valid_domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.e
 
 def scraper(url, resp):
     if is_valid(url):
-        if resp.status_code == 408:
-            print("timeout")
-            return
-        # print("Testing URL: " , url)
-        # try:
-        #     resp = requests.get(url)
-        # except:
-        #     print("Timeout")
 
+        content_size = int(resp.headers.get('Content-Length', 0))
+        max_file_size = 5 * 1024 * 1024
+
+        if resp.status_code == 408:
+            print("TIMEOUT")
+            return
+        if not resp.text or len(resp.text.strip()) == 0:
+                # empty URL
+                return
+        if not resp.headers:
+            return
+        if content_size > max_file_size:
+            return
+        
         # Fixes URL's having / at the end being different from not
 
         url = url.rstrip("/")
@@ -153,6 +160,11 @@ def scraper(url, resp):
 def extract_next_links(url, resp):
     link_list = []
 
+    content = resp.text
+    if count_words(content) < 250:
+        print("PAGE TOO SHORT!")
+        return
+
     # checking if we actually got the page
     # do we have to check utf-8 encoding?
     # print(resp.status_code)
@@ -199,8 +211,8 @@ def extract_next_links(url, resp):
                         parsed_url = urlparse(final_url)
                         domain = parsed_url.netloc
                         path = parsed_url.path
-                        robots_url = f"http://{domain}/robots.txt"
-                        robots_subdomain_url = f"http://{domain}{path}/robots.txt"
+                        robots_url = f"https://{domain}/robots.txt"
+                        robots_subdomain_url = f"https://{domain}{path}/robots.txt"
                         print(robots_subdomain_url)
 
                         if robots_url not in domainSet:
