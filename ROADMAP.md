@@ -48,7 +48,6 @@ How We Take a W On This Project
   # NEED TO DO:
 
   ***MISC.***
-  - Verify web page word count
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
       - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
   - Check for HTML Response codes other than 200 (e.g. 403 Forbidden)
