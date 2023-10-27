@@ -1,11 +1,10 @@
 import re
-import requests
 from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
 from collections import Counter
 from difflib import SequenceMatcher
 
-seed = "https://ics.uci.edu/" 
+# seed = "https://ics.uci.edu/" 
 # seed = "https://sami.ics.uci.edu/research.html"
 
 # linkSet will transform list of links into a set to remove duplicates
@@ -45,10 +44,10 @@ stopWords = stopwords = set([
 def scraper(url, resp):
     if is_valid(url):
         print("Testing URL: " , url)
-        try:
-            resp = requests.get(url)
-        except:
-            print("Timeout")
+        # try:
+        #     resp = requests.get(url)
+        # except:
+        #     print("Timeout")
 
         # Store number of unique pages
         links = extract_next_links(url, resp)
@@ -60,7 +59,9 @@ def scraper(url, resp):
         else:
             print("No more links here! Moving on...")
 
-        links.remove(url)
+        print("LINK LENGTH: ", len(links))
+        if url in links and links is not None:
+            links.remove(url)
 
         print("Extracted Links:")
         if(links is not None):
@@ -70,8 +71,9 @@ def scraper(url, resp):
             print("Number of Unique Pages: ", uniquePages)
         
         # Store word count for the current URL
-        content = resp.text
-        pageWordCounts[url] = count_words(content)
+        if resp.raw_response.content:
+            content = resp.raw_response.content
+            pageWordCounts[url] = count_words(content)
 
         # Update wordCounter for each tokenized word, not including stop words
         tokens = tokenize(content)
@@ -128,12 +130,13 @@ def extract_next_links(url, resp):
     # do we have to check utf-8 encoding?
     # print(resp.status_code)
     # print(resp.headers)
-    if resp.status_code == 200:
+    # print(resp.status_code)
+    if resp.status == 200:
         try:
             # use BeautifulSoup library to parse the HTML content of the page
             # print("Raw Content: ", raw)
 
-            soup = BeautifulSoup(resp.text, 'html.parser')
+            soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
 
             # this code is mid i think
             # we want to eliminate the possibility of a 404 page which doesnt return 
@@ -170,7 +173,7 @@ def extract_next_links(url, resp):
             print("ERROR: Error parsing " + url + str(e))       
     # if the response code was something other than 200, means there was an error - print it so we can see
     else:
-        print("Error: " + str(resp.status_code))
+        print("Error: " + str(resp.status))
         return
 
     return link_list
@@ -239,12 +242,12 @@ def count_words(content):
 
 
 
-resp = requests.get(seed)
-urlsss = scraper(seed, resp)
+# resp = requests.get(seed)
+# urlsss = scraper(seed, resp)
 
-print("URL's Scraped From Seed")
-for i in urlsss:
-    print(i)
+# print("URL's Scraped From Seed")
+# for i in urlsss:
+#     print(i)
 
 
 # ------------------------------------------------------------------- OLD DRIVER CODE - KEEP JUST IN CASE----------------------------------------------------------------------------
