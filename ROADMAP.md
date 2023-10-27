@@ -50,7 +50,6 @@ How We Take a W On This Project
   ***MISC.***
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
       - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-  - **Page Similarity** (ASCII?) + **AVOID TRAPS!!!!!!!!!!!**
     - **DIVERT FROM TIMEOUTS - ENFORCE PROGRAM TO DO THIS**
   - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
   - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
