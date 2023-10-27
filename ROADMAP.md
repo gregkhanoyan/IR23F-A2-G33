@@ -51,7 +51,6 @@ How We Take a W On This Project
   - **50 MOST COMMON WORDS** - through all the websites 
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
       - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-  - **TIMEOUTS:** Do we need to divert? If so, how can we do so without importing 'requests'?
   - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
   - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
       - Detect and avoid crawling very large files, esp. if they have low information content
