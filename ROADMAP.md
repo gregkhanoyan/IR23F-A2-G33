@@ -48,14 +48,14 @@ How We Take a W On This Project
   # NEED TO DO:
 
   ***MISC.***
+  - **50 MOST COMMON WORDS** - through all the websites 
   -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
       - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-      - **DIVERT FROM TIMEOUTS - ENFORCE PROGRAM TO DO THIS**
+  - **TIMEOUTS:** Do we need to divert? If so, how can we do so without importing 'requests'?
   - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
   - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
       - Detect and avoid crawling very large files, esp. if they have low information content
       - Decide and discuss a reasonable definition for low information page + defend it in the TA talk
-  - Politeness
   - - Detect and avoid deal URL's that return a 200 status but no data
       - https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html could be useful here
   - Detect redirects and if the page redirects your crawler, index the redirected content
