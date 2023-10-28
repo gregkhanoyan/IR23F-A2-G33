@@ -147,6 +147,10 @@ def scraper(url, resp):
     sorted_subdomains = []
     keys = list(subdomainCounts.keys())
     keys.sort()
+
+    for key in keys:
+        value = subdomainCounts[key]
+        sorted_subdomains.append((key, value))
     
     for subdomain, count in sorted_subdomains:
         print(f"http://{subdomain}.ics.uci.edu, {count}")

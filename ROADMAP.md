@@ -46,8 +46,6 @@ How We Take a W On This Project
   We also print whether or not a link is valid and can be crawled.
 
   # NEED TO DO:
-  
-  -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
   - Detect redirects and if the page redirects your crawler, index the redirected content
   - Run on **openlab** with **tmux**
 
