@@ -29,8 +29,7 @@ wordCounter = Counter()
 user_agent = "IR UF23 11539047,55544104"
 
 # list of stopwords
-# why are there 2 equals lmao
-stopWords = stopwords = set([
+stopWords = set([
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", 
     "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", 
     "between", "both", "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't", 
@@ -81,46 +80,48 @@ def scraper(url, resp):
             for link in links:
                 if link not in linkSet:
                     linkSet.add(link)
+
         else:
             print("No more links here! Moving on...")
             # return
 
         # print("LINK LENGTH: ", len(links))
-
-        # why do we do this?
-        if links is not None and url in links:
-            links.remove(url)
-
         # print("Extracted Links:")
 
+        # Number of Unique Pages
+        # Add current list of links into a set to discard dupes
         if(links is not None):
             linkSet.update(links)
             # Find number of unique pages
             uniquePages = len(linkSet)
             print("Number of Unique Pages: ", uniquePages)
         
+        # Page Word Count
         # Store word count for the current URL
         if resp.text and resp.text is not None:
             content = resp.text
             pageWordCounts[url] = count_words(content)
-
+            
+            # 50 Most Common Words
             # Update wordCounter for each tokenized word, not including stop words
             tokens = tokenize(content)
             for word in tokens:
                 if word not in stopWords:
                     wordCounter[word] += 1
 
-        # parsed_url = urlparse(url)
-        # if parsed_url.netloc.endswith('ics.uci.edu'):
+        # Subdomain Count
+        # urlparse splits up URL
+        # netloc takes only the www.something.ics.uci.edu part
+        parsed_url = urlparse(url) 
+        if parsed_url.netloc.endswith('ics.uci.edu'):   # if in ics.uci.edu domain
             
-        #     # Extract the subdomain part
-        #     subdomain = parsed_url.netloc.rsplit('.', 2)[0]
+            # Extract the subdomain part
+            subdomain = parsed_url.netloc.rsplit('.')[0]
 
-        #     if subdomain == 'ics':
-        #         subdomain = parsed_url.netloc.rsplit('.', 3)[1]
-            
-        #     # Increment count for the subdomain or initialize it if it doesn't exists
-        #     subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
+            if subdomain != 'ics':
+                # If base ics.uci.edu, skip
+                # Increment count for the subdomain or initialize it if it doesn't exists
+                subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
 
         # if links is not None:
             # for link in links:
@@ -143,7 +144,10 @@ def scraper(url, resp):
     print("50 Most Common Words:", most_common_words)
 
     # Print out the counts for each subdomain
-    sorted_subdomains = sorted(subdomainCounts.items(), key=lambda x: x[0])  # Sort by subdomain name
+    sorted_subdomains = []
+    keys = list(subdomainCounts.keys())
+    keys.sort()
+    
     for subdomain, count in sorted_subdomains:
         print(f"http://{subdomain}.ics.uci.edu, {count}")
 
@@ -328,9 +332,9 @@ def not_similar(url):
 resp = requests.get(seed)
 urlsss = scraper(seed, resp)
 
-print("URL's Scraped From Seed")
-for i in urlsss:
-    print(i)
+# print("URL's Scraped From Seed")
+# for i in urlsss:
+#     print(i)
 
 # url1 = "https://wics.ics.uci.edu/events/2022-01-28/"
 # url2 = "https://wics.ics.uci.edu/events/2022-02-19"

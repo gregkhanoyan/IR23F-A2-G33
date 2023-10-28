@@ -46,44 +46,18 @@ How We Take a W On This Project
   We also print whether or not a link is valid and can be crawled.
 
   # NEED TO DO:
-
-  ***MISC.***
-  - Verify web page word count
-  - fix subdomain typo - **fix this part of the deliverables as a whole lmao**
-  - **FIND A WAY TO CALCULATE DELIVERABLE STATISTICS INDEPENDENT OF SCRAPER.PY?**
-  - **NO DRIVER CODE**
-  - Check for HTML Response codes other than 200 (e.g. 403 Forbidden)
-  - Deal with duplicate links in 'extract_next_links(url, resp)' function
-  - **Page Similarity** (ASCII?) + **AVOID TRAPS!!!!!!!!!!!**
-  - Longest page URL being invalid - why is it considering this if it throws a 404 error?
-  - **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
-  - check for head being empty (**timed out**)
-  - **CHECK FOR INVALID PAGES -> REAL PAGE BUT ERROR STATEMENTS IN HEAD**
-  - Define what we consider pages with "high textual information content" and crawl **only** those pages - ignore low information content
-      - Detect and avoid crawling very large files, esp. if they have low information content
-      - Decide and discuss a reasonable definition for low information page + defend it in the TA talk
-  - Politeness
-  - - Detect and avoid deal URL's that return a 200 status but no data
-      - https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html could be useful here
+  
+  -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
   - Detect redirects and if the page redirects your crawler, index the redirected content
-  -  Ensure we send the server a request with ASCII URL
-      - make sure that the URL being requested is ics.uci.edu, not <a href="ics.uci.edu">
-  - tmux
+  - Run on **openlab** with **tmux**
 
 
  # Deliverables:
  
   - Determine how many unique pages we found (unique = URL - fragment)
-      - should be easy, since we already defragment in 'extract_next_links(url, resp)'
   - Determine the longest page in terms of the number of words (HTML markup doesn't count as words)
-      - Need to find a way to calculate word number without HTML markup code
-      - can def use some library for this (explore BeautifulSoup)
-      - Word Length count printed?
-  - Determine the 50 most common words in the entire set of pages crawled under these domains. Submit list in order of frequency
-      - Use Assignment 1 Code
-      - Ignore "English Stop Words: https://www.ranks.nl/stopwords"
-  - Determine how many subdomains we found in the 'ics.uci.edu' domain. Submit list of subdomains ordered alphabetically and 
-  number of unique pages detected in each subdomain. 
+  - Determine the 50 most common words in the entire set of pages crawled under these domains. Submit list in order of frequency.
+  - Determine how many subdomains we found in the 'ics.uci.edu' domain. Submit list of subdomains ordered alphabetically and number of unique pages detected in each subdomain. 
       - Content should be like so: {URL, number} e.g. {http://vision.ics.edu, 10}
   
   **Politeness**      
