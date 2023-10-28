@@ -110,7 +110,8 @@ def scraper(url, resp):
         if parsed_url.netloc.endswith('ics.uci.edu'):
 
             # https://subdomain.ics.uci.edu
-            url_to_store = parsed_url.scheme +  "://" + parsed_url.netloc
+            # url_to_store = parsed_url.scheme +  "://" + parsed_url.netloc
+            subdomain = parsed_url.netloc.split('.')[0]
             
             # Extract the subdomain part
             subdomain = parsed_url.netloc.rsplit('.')[0]
@@ -118,7 +119,9 @@ def scraper(url, resp):
             if subdomain != 'ics':
                 # If base ics.uci.edu, skip
                 # Increment count for the subdomain or initialize it if it doesn't exists
-                subdomainCounts[url_to_store] = subdomainCounts.get(subdomain, 0) + 1
+                # subdomainCounts[url_to_store] = subdomainCounts.get(subdomain, 0) + 1
+                subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
+
                 # print("SUBDOMAIN: ", subdomainCounts)
 
     else:
@@ -140,9 +143,14 @@ def scraper(url, resp):
     keys = list(subdomainCounts.keys())
     keys.sort()
 
+    # for key in keys:
+    #     value = subdomainCounts[key]
+    #     sorted_subdomains.append((key, value))
+    
     for key in keys:
         value = subdomainCounts[key]
-        sorted_subdomains.append((key, value))
+        full_url = f"https://{key}.ics.uci.edu"
+        sorted_subdomains.append((full_url, value))
 
     print("Sorted Subdomains: ", sorted_subdomains)
 
