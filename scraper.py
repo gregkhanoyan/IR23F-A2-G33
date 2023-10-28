@@ -135,7 +135,7 @@ def scraper(url, resp):
 
     # Get the 50 most common words
     most_common_words = wordCounter.most_common(50)
-    print("50 most common words:", most_common_words)
+    # print("50 most common words:", most_common_words)
 
     # Print out the counts for each subdomain
     # sortedSubdomains = dict(sorted(subdomainCounts.items(), key=lambda item: item[0]))
@@ -152,7 +152,7 @@ def scraper(url, resp):
         full_url = f"https://{key}.ics.uci.edu"
         sorted_subdomains.append((full_url, value))
 
-    print("Sorted Subdomains: ", sorted_subdomains)
+    # print("Sorted Subdomains: ", sorted_subdomains)
 
     # linkSet validity checker
     links_return = []
@@ -265,7 +265,7 @@ def is_valid(url):
             "ps", "eps", "tex", "ppt", "pptx", "doc", "docx", "xls", "xlsx", "names",
             "data", "dat", "exe", "bz2", "tar", "msi", "bin", "7z", "psd", "dmg", "iso",
             "epub", "dll", "cnf", "tgz", "sha1", "thmx", "mso", "arff", "rtf", "jar", "csv",
-            "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz" , "img", "war", "mpg"
+            "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz" , "img", "war", "mpg" , "ipynb" , "ppsx"
         ]
 
         # List of valid domains we can crawl in
@@ -306,8 +306,14 @@ def tokenize(content):
 
 
 def count_words(content):
-    # Strip HTML markup
+    # Parse HTML markup
     soup = BeautifulSoup(content, 'html.parser')
+
+    # Remove html tags, invisible text
+    for tags in soup(["script", "style"]):
+        tags.extract()
+    
+    # Get text
     newContent = soup.get_text()
 
     # Use regex to count the number of words in the content
