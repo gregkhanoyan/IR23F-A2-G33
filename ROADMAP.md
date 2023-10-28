@@ -47,7 +47,7 @@ How We Take a W On This Project
 
   # NEED TO DO:
   
-  -  **SUBDOMAINS - NUMBER AND ORDERED ALPHABETICALLY**
+  -  **LONGEST PAGE**
   - Detect redirects and if the page redirects your crawler, index the redirected content
   - Run on **openlab** with **tmux**
 
