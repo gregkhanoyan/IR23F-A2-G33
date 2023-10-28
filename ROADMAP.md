@@ -46,6 +46,11 @@ How We Take a W On This Project
   We also print whether or not a link is valid and can be crawled.
 
   # NEED TO DO:
+<<<<<<< HEAD
+=======
+  
+  -  **LONGEST PAGE**
+>>>>>>> 164edbfc62d5626bdf0892aaa1c81971747bfb95
   - Detect redirects and if the page redirects your crawler, index the redirected content
   - Run on **openlab** with **tmux**
 
