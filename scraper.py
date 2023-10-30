@@ -321,7 +321,7 @@ def is_valid(url):
             "png", "tif", "tiff", "mid", "mp2", "mp3", "mp4",
             "wav", "avi", "mov", "mpeg", "ram", "m4v", "mkv", "ogg", "ogv", "pdf",
             "ps", "eps", "tex", "ppt", "pptx", "doc", "docx", "xls", "xlsx", "names",
-            "data", "dat", "exe", "bz2", "tar", "msi", "bin", "7z", "psd", "dmg", "iso",
+            "data", "dat", "exe", "bz2", "php", "tar", "msi", "bin", "7z", "psd", "dmg", "iso",
             "epub", "dll", "cnf", "tgz", "sha1", "thmx", "mso", "arff", "rtf", "jar", "csv",
             "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz" , "img", "war", "mpg" , "ipynb" , "ppsx"
         ]
@@ -381,12 +381,17 @@ def not_similar(url):
     query_similarity = 0
 
     for stored_url, components in domainSet.items():
+        domain_similarity = SequenceMatcher(None, parsed.netloc, components["netloc"]).ratio()
+        path_similarity = SequenceMatcher(None, parsed.path, components["path"]).ratio()
+        if domain_similarity == 1 and path_similarity > 0.6: 
+            return False
         if parsed.netloc == components["netloc"] and parsed.path == components["path"]:
             query_similarity = SequenceMatcher(None, parsed.query, components["query"]).ratio()
-
-            if query_similarity >= 0.6:
+            
+            if query_similarity >= 0.7:
                 # If at least one item in domainSet has similar query, return False
                 return False
+        
 
     # If the loop finishes and no similar query was found, return True
     return True
