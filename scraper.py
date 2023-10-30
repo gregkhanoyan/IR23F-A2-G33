@@ -53,7 +53,7 @@ valid_domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.e
 
 def scraper(url, resp):
     try:
-        if is_valid(url):
+        if is_valid(url) and resp.status == 200:
 
             if resp.raw_response is not None and resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
                 content_size = int(resp.raw_response.headers['Content-Length'])
@@ -214,7 +214,7 @@ def extract_next_links(url, resp):
                     # print("FINAL URL", final_url)
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
-                    if is_valid(final_url) and not_similar(final_url):
+                    if is_valid(final_url):
                         # parsed_url = urlparse(final_url)
                         # domain = parsed_url.netloc
                         # path = parsed_url.path
