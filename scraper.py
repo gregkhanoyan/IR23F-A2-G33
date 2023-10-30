@@ -1,9 +1,9 @@
 import re
 from urllib.parse import urlparse, urljoin, urldefrag, unquote
+import urllib.robotparser
 from bs4 import BeautifulSoup
 from collections import Counter
 from difflib import SequenceMatcher
-from robotexclusionrulesparser import RobotExclusionRulesParser
 
 # seed = "https://ics.uci.edu/" 
 # seed = "https://sami.ics.uci.edu/research.html"
@@ -12,17 +12,14 @@ from robotexclusionrulesparser import RobotExclusionRulesParser
 linkSet = set()
 
 # set that stores all the domains for robots.txt
-domainSet = set()
+# need to use domainSet
+robotsSet = set()
 
-# pagewordCounts dictionary will hold url and word count
+# pagewordCounts dictionary will hold url and word count - for max words
 pageWordCounts = {}
 
 # subdomainCounts dictionary will hold subdomains and their frequency
 subdomainCounts = {}
-
-# sorted subdomains
-# sortedSubdomains = {}
-
 # wordCounter will hold number of times a certain word is read
 wordCounter = Counter()
 
@@ -49,34 +46,53 @@ stopWords = set([
     "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"
 ])
 
-valid_domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
+domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
+
+max_file_size = 200 * 1024 * 1024
 
 def scraper(url, resp):
     try:
-        if is_valid(url) and resp.status == 200:
-
-            if resp.raw_response is not None and resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
-                content_size = int(resp.raw_response.headers['Content-Length'])
-            else:
-                content_size = None  # Handle the case where the header is missing
-                
-            max_file_size = 200 * 1024 * 1024
-
+        if is_valid(url):
             if resp.status == 408:
-                print("timeout")
-                return
-            if resp.raw_response is not None and resp.raw_response.content is not None:
-                if len(resp.raw_response.content.strip()) == 0:
-                    # empty
+                    print("TIMEOUT...")
                     return
             if resp.raw_response is not None:
-                if resp.raw_response.headers is None:
+                if resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
+                    content_size = int(resp.raw_response.headers['Content-Length'])
+                else:
+                    content_size = None  # Handle the case where the header is missing
                     return
-            if content_size is not None and content_size > max_file_size:
+                if resp.raw_response.content is not None:
+                    if len(resp.raw_response.content.strip()) == 0:
+                        return
+
+                if content_size is None or content_size > max_file_size:
+                    return
+
+            else:
+                print("NO RESPONSE RECEIVED?!")
                 return
             
             # Fixes URL's having / at the end being different from not
             url = url.rstrip("/")
+
+             # Update SUBDOMAINCOUNTER dictionary
+            parsed_url = urlparse(url)
+
+            if parsed_url.netloc.endswith(('cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu', 'ics.uci.edu')):
+                # https://subdomain.ics.uci.edu
+                # url_to_store = parsed_url.scheme +  "://" + parsed_url.netloc
+                
+                # Extract the subdomain part
+                subdomain = parsed_url.netloc.rsplit('.')[0]
+
+                if subdomain not in ['ics', 'cs', 'informatics', 'stats']:
+                    # If base ics.uci.edu, skip
+                    # Increment count for the subdomain or initialize it if it doesn't exists
+                    # subdomainCounts[url_to_store] = subdomainCounts.get(subdomain, 0) + 1
+                    subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
+
+                    # print("SUBDOMAIN: ", subdomainCounts)
 
             # List of found links
             links = extract_next_links(url, resp)
@@ -104,27 +120,7 @@ def scraper(url, resp):
                 tokens = tokenize(content)
                 for word in tokens:
                     if word.lower() not in stopWords:
-                        wordCounter[word] += 1
-
-            # Update SUBDOMAINCOUNTER dictionary
-            parsed_url = urlparse(url)
-            if parsed_url.netloc.endswith('ics.uci.edu'):
-
-                # https://subdomain.ics.uci.edu
-                # url_to_store = parsed_url.scheme +  "://" + parsed_url.netloc
-                subdomain = parsed_url.netloc.split('.')[0]
-                
-                # Extract the subdomain part
-                subdomain = parsed_url.netloc.rsplit('.')[0]
-
-                if subdomain != 'ics':
-                    # If base ics.uci.edu, skip
-                    # Increment count for the subdomain or initialize it if it doesn't exists
-                    # subdomainCounts[url_to_store] = subdomainCounts.get(subdomain, 0) + 1
-                    subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
-
-                    # print("SUBDOMAIN: ", subdomainCounts)
-
+                        wordCounter[word] += 1           
         else:
             print(url, " is not a valid URL for crawling.")
     except Exception as e:
@@ -164,46 +160,40 @@ def scraper(url, resp):
             links_return.append(link)
 
     # returns a list of links
-    return links_return
+    return list(linkSet)
 
 
 def extract_next_links(url, resp):
     link_list = []
-    if resp.raw_response is not None:
-        if resp.raw_response.content is not None:
-            content = resp.raw_response.content
-        if count_words(content) < 250:
-            print("PAGE TOO SHORT!")
-            return
-    
-    # checking if we actually got the page
-    # do we have to check utf-8 encoding?
-    # print(resp.status_code)
-    # print(resp.headers)
-    # print(resp.status_code)
+    # if resp.raw_response is not None:
+    #     if resp.raw_response.content is not None:
+
     if resp.status == 200:
         try:
             # use BeautifulSoup library to parse the HTML content of the page
             # print("Raw Content: ", raw)
 
-            soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+            content = resp.raw_response.content
+            
+            if count_words(content) < 250:
+                print("PAGE TOO SHORT!")
+                return
 
-            # we want to eliminate the possibility of a 404 page which doesnt return 
-            # an error 404 code, such as http://cs.uci.edu/page
-            # title_tag = soup.find("title")
-            # invalid_title = "Page not found"
+            soup = BeautifulSoup(content, 'html.parser')
 
-            # # checks if Page not found is title, if so break of function
-            # if title_tag and invalid_title:
-            #     return
+            body_content = soup.body.get_text(strip=True)
+            if not body_content:
+                print("HTML DOES NOT CONTAIN TEXT IN BODY (extract_next_links)")
+                return
 
             # in the HTML, we want to find all '<a>' tags and extract the link, the 'href'
             for curr in soup.find_all('a'):
                 link = curr.get('href')
-                if link:
+                if link is not None:
                     # we then use 'urllib.parse: urljoin' in order to combine the relative URL's with our base URL in order to get our final URL
                     url_joined = urljoin(url, link)
 
+                    # Strip the trailing '/'
                     url_joined = url_joined.rstrip("/")
 
                     # Use 'urllibe.parse: urldefrag' to remove the fragment, as in this assignment we ignore the fragment 
@@ -214,32 +204,44 @@ def extract_next_links(url, resp):
                     # print("FINAL URL", final_url)
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
+                    
                     if is_valid(final_url):
-                        # parsed_url = urlparse(final_url)
-                        # domain = parsed_url.netloc
-                        # path = parsed_url.path
-                        # robots_url = f"https://{domain}/robots.txt"
-                        # robots_subdomain_url = f"https://{domain}{path}/robots.txt"
-                        # print(robots_subdomain_url)
+                        # https://vision.ics.uci.edu
+                        # https://vision.ics.uci.edu/robots.txt
 
                         # https://vision.ics.uci.edu
-                        if final_url in subdomainCounts:
-                            robots_url = final_url + "/robots.txt"
-                            print(robots_url)     
-                        else:
-                            robots_url = None                       
+                        temp_url = urlparse(final_url)
+                        final_url_domain = temp_url.netloc
+                        final_url_subdomain = final_url_domain.netloc.rsplit('.')[0]
 
-                        if robots_url and robots_url not in domainSet:
-                            domainSet.add(robots_url)
-
-                        if robots_url is not None:
-                            parser = RobotExclusionRulesParser()
-                            parser.fetch(robots_url)
+                        if robotsSet is not None:
+                            if final_url_domain + "/robots.txt" in robotsSet:
+                                robots_url = final_url_domain + "/robots.txt"
+                                # print(robots_url)
+                            else:
+                                # big "if in"
+                                for url, count in subdomainCounts.items():          # vision
+                                    if final_url_subdomain == url:
+                                        # if in, then create robots URL
+                                        robots_url = final_url_domain + "/robots.txt"
+                                        robotsSet.add(robots_url)
+                                        break
+                                        # print(robots_url)                  
                         
-                            if parser.is_allowed(user_agent, final_url):
+                        if robots_url:
+                            parser = urllib.robotparser.RobotFileParser()
+                            parser.set_url(robots_url)
+                            parser.read()
+                            allowed = parser.can_fetch(user_agent, robots_url)
+                        
+                            if(allowed):
                                 link_list.append(final_url)
                         else:
-                            link_list.append(final_url)
+                            continue
+                    else:
+                        continue
+                else:
+                    continue
         except Exception as e:
             print("ERROR: Error parsing " + url + " - " + str(e)) 
             return []      
@@ -270,9 +272,6 @@ def is_valid(url):
             "epub", "dll", "cnf", "tgz", "sha1", "thmx", "mso", "arff", "rtf", "jar", "csv",
             "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz" , "img", "war", "mpg" , "ipynb" , "ppsx"
         ]
-
-        # List of valid domains we can crawl in
-        domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
 
         # Check if the parsed domain matches any of the allowed domains
         domain_check = any(parsed.netloc.endswith("." + domain) or parsed.netloc == domain for domain in domains)
@@ -313,11 +312,30 @@ def count_words(content):
     soup = BeautifulSoup(content, 'html.parser')
 
     # Remove html tags, invisible text
-    for tags in soup(["script", "style"]):
+    for tags in soup([    'script',
+    'style',
+    'meta',
+    'link',
+    'head',
+    'noscript',
+    'comment',
+    'img',
+    'audio',
+    'video',
+    'input',
+    'button',
+    'iframe',
+    'form',
+    'nav',
+    'header',
+    'footer',
+    'aside',]):
         tags.extract()
     
     # Get text
     newContent = soup.get_text()
+
+    newContent = newContent.replace('html', '')
 
     # Use regex to count the number of words in the content
     words = re.findall(r'\w+', newContent)
