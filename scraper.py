@@ -11,6 +11,9 @@ from difflib import SequenceMatcher
 # linkSet will transform list of links into a set to remove duplicates
 linkSet = set()
 
+# set of domains used for similarity
+parsedDomains = {}
+
 # set that stores all the domains for robots.txt
 # need to use domainSet
 # robotsSet = set()
@@ -53,24 +56,25 @@ max_file_size = 200 * 1024 * 1024
 def scraper(url, resp):
     try:
         if is_valid(url):
+            
+            if resp.raw_response is not None and resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
+                content_size = int(resp.raw_response.headers['Content-Length'])
+            else:
+                content_size = None  # Handle the case where the header is missing
+                
+            max_file_size = 500 * 1024 * 1024
+
             if resp.status == 408:
-                    print("TIMEOUT...")
+                print("timeout")
+                return []
+            if resp.raw_response is not None and resp.raw_response.content is not None:
+                if len(resp.raw_response.content.strip()) == 0:
+                    # empty
                     return []
             if resp.raw_response is not None:
-                if resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
-                    content_size = int(resp.raw_response.headers['Content-Length'])
-                else:
-                    content_size = None  # Handle the case where the header is missing
+                if resp.raw_response.headers is None:
                     return []
-                if resp.raw_response.content is not None:
-                    if len(resp.raw_response.content.strip()) == 0:
-                        return []
-
-                if content_size is None or content_size > max_file_size:
-                    return []
-
-            else:
-                print("NO RESPONSE RECEIVED?!")
+            if content_size is not None and content_size > max_file_size:
                 return []
             
             # Fixes URL's having / at the end being different from not
@@ -78,7 +82,7 @@ def scraper(url, resp):
 
              # Update SUBDOMAINCOUNTER dictionary
             parsed_url = urlparse(url)
-            print("PARSED URL NETLOC", parsed_url.netloc)
+            # print("PARSED URL NETLOC", parsed_url.netloc)
 
             if parsed_url.netloc.endswith('cs.uci.edu') or parsed_url.netloc.endswith('informatics.uci.edu') or parsed_url.netloc.endswith('stat.uci.edu') or parsed_url.netloc.endswith('ics.uci.edu'):
                 # https://subdomain.ics.uci.edu
@@ -110,6 +114,9 @@ def scraper(url, resp):
                 linkSet.update(links)
             else:
                 print("No more links here! Moving on...")
+
+            for url in linkSet:
+                parsedDomains[url] = urlparse(url)
 
             # print(list(linkSet))
             # print("LINK LENGTH: ", len(links))
@@ -158,7 +165,7 @@ def scraper(url, resp):
         full_url = f"https://{key}.uci.edu"
         sorted_subdomains.append((full_url, value))
 
-    print("Sorted Subdomains: ", sorted_subdomains)
+    # print("Sorted Subdomains: ", sorted_subdomains)
 
     # print(list(linkSet))
     # print(len(linkSet))
@@ -178,7 +185,7 @@ def extract_next_links(url, resp):
             # print("Raw Content: ", raw)
 
             content = resp.raw_response.content
-            print("WORDS: ", count_words(content))
+            # print("WORDS: ", count_words(content))
             
             if count_words(content) < 250:
                 print("PAGE TOO SHORT!")
@@ -186,24 +193,22 @@ def extract_next_links(url, resp):
 
             soup = BeautifulSoup(content, 'html.parser')
 
-            body_content = soup.body.get_text(strip=True)
-            if not body_content:
-                print("HTML DOES NOT CONTAIN TEXT IN BODY (extract_next_links)")
-                return []
+            # body_content = soup.body.get_text(strip=True)
+            # if not body_content:
+            #     print("HTML DOES NOT CONTAIN TEXT IN BODY (extract_next_links)")
+            #     return []
 
             # in the HTML, we want to find all '<a>' tags and extract the link, the 'href'
             for curr in soup.find_all('a'):
                 link = curr.get('href')
-                print(link)
-                if link == None:
-                    print("LINK IS NONE!")
-                    continue
+                # print(link)
                 if link is not None:
                     # we then use 'urllib.parse: urljoin' in order to combine the relative URL's with our base URL in order to get our final URL
                     url_joined = urljoin(url, link)
 
                     # Strip the trailing '/'
                     url_joined = url_joined.rstrip("/")
+                    # print("URL JOINED: ", url_joined)
 
                     # Use 'urllibe.parse: urldefrag' to remove the fragment, as in this assignment we ignore the fragment 
                     if "#" in url_joined:
@@ -214,7 +219,7 @@ def extract_next_links(url, resp):
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
                     
-                    if is_valid(final_url):
+                    if is_valid(final_url) and not_similar(url):
                         # https://vision.ics.uci.edu
                         # https://vision.ics.uci.edu/robots.txt
 
@@ -269,7 +274,7 @@ def extract_next_links(url, resp):
                         # print("CONTINUING LINE 269")
                         continue
                 else:
-                    print("CONTINUING LINE 272 - LINK IS NONE")
+                    # print("CONTINUING LINE 272 - LINK IS NONE")
                     continue
         except Exception as e:
             print("ERROR: Error parsing " + url + " - " + str(e)) 
@@ -279,7 +284,7 @@ def extract_next_links(url, resp):
         print("Error: " + str(resp.status))
         return
 
-    print("LIST IN EXTRACT: ", link_list)
+    # print("LIST IN EXTRACT: ", link_list)
     return link_list
 
 
@@ -354,21 +359,29 @@ def count_words(content):
 
 
 def not_similar(url):
+    flag = True
+    # print("URL OG: ", url)
     parsed = urlparse(url)
-    domain_key = parsed.netloc  # Use the domain as the key for efficient lookups
+    # print("Parsed URL OG", parsed)
 
-    for other_url in linkSet:
-        other_parsed = urlparse(other_url)
-        other_domain_key = other_parsed.netloc
+    for other_url, other_parsed in parsedDomains.items():
+        # print("other_url: ", other_url)
+        if other_url == url:
+            continue
+        # print("Other Parsed: ", other_parsed)
 
-        # If the domain is the same, consider comparing paths and queries
-        if domain_key == other_domain_key:
-            path_similarity = SequenceMatcher(None, parsed.path, other_parsed.path).ratio()
-            query_similarity = SequenceMatcher(None, parsed.query, other_parsed.query).ratio()
+        domain_similarity = SequenceMatcher(None, parsed.netloc, other_parsed.netloc).ratio()
+        # print(domain_similarity)
+        path_similarity = SequenceMatcher(None, parsed.path, other_parsed.path).ratio()
+        # print(path_similarity)
+        query_similarity = SequenceMatcher(None, parsed.query, other_parsed.query).ratio()
+        # print(query_similarity)
 
-            # If path and query are significantly similar, consider them as similar URLs
-            if path_similarity > 0.8 and query_similarity > 0.8:
-                return False
-
-    # If no similar URL is found, return True
-    return True
+        if (domain_similarity == 1 and path_similarity > 0.6):
+            flag = False
+            return flag
+            print("TOO SIMILAR")
+        else:
+            flag = True
+            # print("Not Similar")
+    return flag
