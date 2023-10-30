@@ -1,4 +1,5 @@
 import re
+import time
 from urllib.parse import urlparse, urljoin, urldefrag, unquote
 import urllib.robotparser
 from bs4 import BeautifulSoup
@@ -12,7 +13,9 @@ from difflib import SequenceMatcher
 linkSet = set()
 
 # set of domains used for similarity
-parsedDomains = {}
+domainSet = {}
+
+normalizedSet = set()
 
 # set that stores all the domains for robots.txt
 # need to use domainSet
@@ -56,7 +59,8 @@ max_file_size = 200 * 1024 * 1024
 def scraper(url, resp):
     try:
         if is_valid(url):
-            
+            # politeness
+            # time.sleep(2)
             if resp.raw_response is not None and resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
                 content_size = int(resp.raw_response.headers['Content-Length'])
             else:
@@ -115,16 +119,13 @@ def scraper(url, resp):
             else:
                 print("No more links here! Moving on...")
 
-            for url in linkSet:
-                parsedDomains[url] = urlparse(url)
-
             # print(list(linkSet))
             # print("LINK LENGTH: ", len(links))
             # print("Extracted Links:")
 
             # Find number of UNIQUE PAGES
-            uniquePages = len(linkSet)
-            print("Number of Unique Pages: ", uniquePages)
+            # uniquePages = len(linkSet)
+            # print("Number of Unique Pages: ", uniquePages)
             
             # Store word count for the current URL; PAGEWORDCOUNTER
             if resp.raw_response and resp.raw_response.content is not None:
@@ -218,8 +219,10 @@ def extract_next_links(url, resp):
                     # print("FINAL URL", final_url)
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
+
+                    # print(not_similar(final_url))
                     
-                    if is_valid(final_url) and not_similar(url):
+                    if is_valid(final_url) and not_similar(final_url):
                         # https://vision.ics.uci.edu
                         # https://vision.ics.uci.edu/robots.txt
 
@@ -268,6 +271,20 @@ def extract_next_links(url, resp):
                         
                         #     if(allowed):
                         link_list.append(final_url)
+                        linkSet.add(final_url)
+                        temp = urlparse(final_url)
+                        domainSet[final_url] = {
+                        "scheme": temp.scheme,
+                        "netloc": temp.netloc,
+                        "path": temp.path,
+                        "params": temp.params,
+                        "query": temp.query,
+                        "fragment": temp.fragment
+                        }
+                        
+
+                        
+
                         # else:
                         #     continue
                     else:
@@ -285,6 +302,7 @@ def extract_next_links(url, resp):
         return
 
     # print("LIST IN EXTRACT: ", link_list)
+    print("UNIQUE PAGES - ", len(linkSet))
     return link_list
 
 
@@ -359,29 +377,16 @@ def count_words(content):
 
 
 def not_similar(url):
-    flag = True
-    # print("URL OG: ", url)
     parsed = urlparse(url)
-    # print("Parsed URL OG", parsed)
+    query_similarity = 0
 
-    for other_url, other_parsed in parsedDomains.items():
-        # print("other_url: ", other_url)
-        if other_url == url:
-            continue
-        # print("Other Parsed: ", other_parsed)
+    for stored_url, components in domainSet.items():
+        if parsed.netloc == components["netloc"] and parsed.path == components["path"]:
+            query_similarity = SequenceMatcher(None, parsed.query, components["query"]).ratio()
 
-        domain_similarity = SequenceMatcher(None, parsed.netloc, other_parsed.netloc).ratio()
-        # print(domain_similarity)
-        path_similarity = SequenceMatcher(None, parsed.path, other_parsed.path).ratio()
-        # print(path_similarity)
-        query_similarity = SequenceMatcher(None, parsed.query, other_parsed.query).ratio()
-        # print(query_similarity)
+            if query_similarity >= 0.6:
+                # If at least one item in domainSet has similar query, return False
+                return False
 
-        if (domain_similarity == 1 and path_similarity > 0.6):
-            flag = False
-            return flag
-            print("TOO SIMILAR")
-        else:
-            flag = True
-            # print("Not Similar")
-    return flag
+    # If the loop finishes and no similar query was found, return True
+    return True
