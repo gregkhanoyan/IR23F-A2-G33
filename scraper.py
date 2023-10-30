@@ -78,13 +78,20 @@ def scraper(url, resp):
 
              # Update SUBDOMAINCOUNTER dictionary
             parsed_url = urlparse(url)
+            print("PARSED URL NETLOC", parsed_url.netloc)
 
-            if parsed_url.netloc.endswith(('cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu', 'ics.uci.edu')):
+            if parsed_url.netloc.endswith('cs.uci.edu') or parsed_url.netloc.endswith('informatics.uci.edu') or parsed_url.netloc.endswith('stat.uci.edu') or parsed_url.netloc.endswith('ics.uci.edu'):
                 # https://subdomain.ics.uci.edu
                 # url_to_store = parsed_url.scheme +  "://" + parsed_url.netloc
                 
                 # Extract the subdomain part
-                subdomain = parsed_url.netloc.rsplit('.')[0]
+                
+                if parsed_url.netloc.rsplit('.')[0] == 'www':
+                    # print("LINE 90")
+                    subdomain = parsed_url.netloc.rsplit('.')[1]
+                else:
+                    subdomain = parsed_url.netloc.rsplit('.')[0]
+                # print("SUBDOMAIN", subdomain)
 
                 if subdomain not in ['ics', 'cs', 'informatics', 'stats']:
                     # If base ics.uci.edu, skip
@@ -101,6 +108,7 @@ def scraper(url, resp):
             # Links added to set to remove duplicates
             if links is not None:
                 linkSet.update(links)
+                print("LINK SET: ", list(linkSet))
             else:
                 print("No more links here! Moving on...")
 
@@ -147,17 +155,10 @@ def scraper(url, resp):
     
     for key in keys:
         value = subdomainCounts[key]
-        full_url = f"https://{key}.ics.uci.edu"
+        full_url = f"https://{key}.uci.edu"
         sorted_subdomains.append((full_url, value))
 
     print("Sorted Subdomains: ", sorted_subdomains)
-
-    # linkSet validity checker
-    links_return = []
-
-    for link in linkSet:
-        if is_valid(link):
-            links_return.append(link)
 
     # returns a list of links
     return list(linkSet)
@@ -174,6 +175,7 @@ def extract_next_links(url, resp):
             # print("Raw Content: ", raw)
 
             content = resp.raw_response.content
+            print("WORDS: ", count_words(content))
             
             if count_words(content) < 250:
                 print("PAGE TOO SHORT!")
@@ -211,9 +213,27 @@ def extract_next_links(url, resp):
 
                         # https://vision.ics.uci.edu
                         temp_url = urlparse(final_url)
-                        final_url_domain = temp_url.netloc
-                        final_url_subdomain = final_url_domain.netloc.rsplit('.')[0]
 
+                        final_url_domain = temp_url.netloc
+                        # print("FINAL URL DOMAIN", final_url_domain)
+
+                        # Extract the subdomain
+                        subdomain = None
+
+                        # Check if the netloc (domain) ends with one of the valid domains
+                        for valid_domain in domains:
+                            if temp_url.netloc.endswith(valid_domain):
+                                # Extract the subdomain by splitting at the first period ('.') in the netloc
+                                if temp_url.netloc.rsplit('.')[0] == 'www':
+                                    # print("LINE 227")
+                                    subdomain = temp_url.netloc.rsplit('.')[1]
+                                else:
+                                    subdomain = temp_url.netloc.rsplit('.')[0]
+                                # print("SUBDOMAIN", subdomain)
+                                break
+                        
+                        robots_url = ''
+                        
                         if robotsSet is not None:
                             if final_url_domain + "/robots.txt" in robotsSet:
                                 robots_url = final_url_domain + "/robots.txt"
@@ -221,7 +241,7 @@ def extract_next_links(url, resp):
                             else:
                                 # big "if in"
                                 for url, count in subdomainCounts.items():          # vision
-                                    if final_url_subdomain == url:
+                                    if subdomain == url:
                                         # if in, then create robots URL
                                         robots_url = final_url_domain + "/robots.txt"
                                         robotsSet.add(robots_url)
@@ -312,30 +332,11 @@ def count_words(content):
     soup = BeautifulSoup(content, 'html.parser')
 
     # Remove html tags, invisible text
-    for tags in soup([    'script',
-    'style',
-    'meta',
-    'link',
-    'head',
-    'noscript',
-    'comment',
-    'img',
-    'audio',
-    'video',
-    'input',
-    'button',
-    'iframe',
-    'form',
-    'nav',
-    'header',
-    'footer',
-    'aside',]):
+    for tags in soup(['script','style']):
         tags.extract()
     
     # Get text
     newContent = soup.get_text()
-
-    newContent = newContent.replace('html', '')
 
     # Use regex to count the number of words in the content
     words = re.findall(r'\w+', newContent)
