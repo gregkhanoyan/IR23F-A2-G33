@@ -64,8 +64,6 @@ max_file_size = 500 * 1024 * 1024
 def scraper(url, resp):
     try:
         if is_valid(url):
-            # politeness
-            # time.sleep(2)
             if resp.text is not None and resp.headers is not None and 'Content-Length' in resp.headers:
                 content_size = int(resp.headers['Content-Length'])
             else:
