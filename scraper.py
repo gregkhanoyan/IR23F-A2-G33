@@ -1,5 +1,3 @@
-#THIS IS LOCAL CODE> DONT RUN ON OPENLAB
-
 import re
 import time
 from urllib.parse import urlparse, urljoin, urldefrag, unquote
@@ -64,6 +62,8 @@ max_file_size = 500 * 1024 * 1024
 def scraper(url, resp):
     try:
         if is_valid(url):
+            # politeness
+            # time.sleep(2)
             if resp.text is not None and resp.headers is not None and 'Content-Length' in resp.headers:
                 content_size = int(resp.headers['Content-Length'])
             else:
@@ -143,16 +143,15 @@ def scraper(url, resp):
             print(url, " is not a valid URL for crawling.")
     except Exception as e:
         print("Error processing URL: ", url, " ", str(e))
-
-    # Find the url of the longest page in terms of words count
+        # Find the url of the longest page in terms of words count
     if pageWordCounts:
         longest_page_url = max(pageWordCounts, key=pageWordCounts.get)
-        # print("Longest page URL:", longest_page_url)
-        # print("Number of words:", pageWordCounts[longest_page_url])
+        print("Longest page URL:", longest_page_url)
+        print("Number of words:", pageWordCounts[longest_page_url])
 
     # Get the 50 most common words
     most_common_words = wordCounter.most_common(50)
-    # print("50 most common words:", most_common_words)
+    print("50 most common words:", most_common_words)
 
     # Print out the counts for each subdomain
     # sortedSubdomains = dict(sorted(subdomainCounts.items(), key=lambda item: item[0]))
@@ -169,7 +168,7 @@ def scraper(url, resp):
         full_url = f"https://{key}.ics.uci.edu"
         sorted_subdomains.append((full_url, value))
 
-    # print("Sorted Subdomains: ", sorted_subdomains)
+    print("Sorted Subdomains: ", sorted_subdomains)
 
     # print(list(linkSet))
     # print(len(linkSet))
@@ -338,16 +337,6 @@ def is_valid(url):
             return False
         if "#comments" in url:
             return False
-        if "filter" in url:
-            return False
-        if "calendar" in url:
-            return False
-        if "date" in url:
-            return False
-        if "stayconnected" in url:
-            return False
-        if "exclusion" in url:
-            return False
         if re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -468,10 +457,10 @@ def print_deliverables():
         most_common_words = wordCounter.most_common(50)
         print("50 MOST COMMON WORDS:", most_common_words)
 
-    if sorted_subdomains:
-        print("SORTED SUBDOMAINS: ", sorted_subdomains)
-    else:
-        print("NO SUBDOMAINS")
+    # if sorted_subdomains:
+    #     print("SORTED SUBDOMAINS: ", sorted_subdomains)
+    # else:
+    #     print("NO SUBDOMAINS")
 
 test_urls = [
     # These are all for validity checker
