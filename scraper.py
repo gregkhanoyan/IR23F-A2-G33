@@ -1,3 +1,5 @@
+# imports and libraries we will be using for scraper
+
 import re
 import time
 from urllib.parse import urlparse, urljoin, urldefrag, unquote
@@ -6,19 +8,13 @@ from bs4 import BeautifulSoup
 from collections import Counter
 from difflib import SequenceMatcher
 
-# seed = "https://ics.uci.edu/" 
-# seed = "https://sami.ics.uci.edu/research.html"
-
 # linkSet will transform list of links into a set to remove duplicates
 linkSet = set()
 
 # set of domains used for similarity
 domainSet = {}
 
-normalizedSet = set()
-
 # set that stores all the domains for robots.txt
-# need to use domainSet
 # robotsSet = set()
 
 # pagewordCounts dictionary will hold url and word count - for max words
@@ -26,9 +22,11 @@ pageWordCounts = {}
 
 # subdomainCounts dictionary will hold subdomains and their frequency
 subdomainCounts = {}
+
 # wordCounter will hold number of times a certain word is read
 wordCounter = Counter()
 
+# user agent for robots
 user_agent = "IR UF23 11539047,55544104"
 
 # list of stopwords
@@ -42,7 +40,7 @@ stopWords = set([
     "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", 
     "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", 
     "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", 
-    "our", "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", 
+    "our", "ours", "ourselves", "out", "over", "own", "same", "markellekelly", "shan't", "she", "she'd", 
     "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", 
     "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", 
     "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", 
@@ -52,181 +50,160 @@ stopWords = set([
     "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"
 ])
 
+# list of valid domains we can crawl in
 domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
 
+# maximum file size for any webpage
 max_file_size = 200 * 1024 * 1024
 
+
+# FUNCTION: scraper(url, resp) - scrapes links using extract_next_links(url, resp) and returns them to worker.py where it is placed to the frontier
 def scraper(url, resp):
+    # try-except to catch exceptions
     try:
+        # check if the url is valid
         if is_valid(url):
+
             # politeness
-            # time.sleep(2)
+            time.sleep(0.2)
+
+            # checking for preliminary emptiness - if all these are False, we know that the webpage has no "real content" size
             if resp.raw_response is not None and resp.raw_response.headers is not None and 'Content-Length' in resp.raw_response.headers:
                 content_size = int(resp.raw_response.headers['Content-Length'])
             else:
-                content_size = None  # Handle the case where the header is missing
-                
-            max_file_size = 500 * 1024 * 1024
+                content_size = None  
 
-            if resp.status == 408:
-                print("timeout")
+            # checking for a status code returned over 400 - this signifies some error
+            if resp.status >= 400:
+                print("TIMEOUT") 
                 return []
+            
+            # checks for the actual content of the webpage, if the text results in 0, we return an empty list
             if resp.raw_response is not None and resp.raw_response.content is not None:
                 if len(resp.raw_response.content.strip()) == 0:
                     # empty
                     return []
+            
+            # more checks because we were getting lots of 'NoneType' errors
             if resp.raw_response is not None:
                 if resp.raw_response.headers is None:
                     return []
+            
+            # returns an empty list if file size is too big
             if content_size is not None and content_size > max_file_size:
                 return []
             
-            # Fixes URL's having / at the end being different from not
+            # Fixes URL's having / at the end being different from not having a /
             url = url.rstrip("/")
 
-             # Update SUBDOMAINCOUNTER dictionary
+             # Subdomain Counts
             parsed_url = urlparse(url)
-            # print("PARSED URL NETLOC", parsed_url.netloc)
 
-            if parsed_url.netloc.endswith('cs.uci.edu') or parsed_url.netloc.endswith('informatics.uci.edu') or parsed_url.netloc.endswith('stat.uci.edu') or parsed_url.netloc.endswith('ics.uci.edu'):
-                # https://subdomain.ics.uci.edu
-                # url_to_store = parsed_url.scheme +  "://" + parsed_url.netloc
-                
-                # Extract the subdomain part
-                
+            # checking for subdomains with 'ics.uci.edu' at the end - these are the subdomains we want
+            if parsed_url.netloc == "ics.uci.edu" or parsed_url.netloc.endswith(".ics.uci.edu"):
+                # remove 'www' if in URL
                 if parsed_url.netloc.rsplit('.')[0] == 'www':
-                    # print("LINE 90")
                     subdomain = parsed_url.netloc.rsplit('.')[1]
                 else:
                     subdomain = parsed_url.netloc.rsplit('.')[0]
-                # print("SUBDOMAIN", subdomain)
 
-                if subdomain not in ['ics', 'cs', 'informatics', 'stats']:
-                    # If base ics.uci.edu, skip
-                    # Increment count for the subdomain or initialize it if it doesn't exists
-                    # subdomainCounts[url_to_store] = subdomainCounts.get(subdomain, 0) + 1
+                # if our subdomain is not ICS, we can count it towards our subdomain counts
+                if subdomain != 'ics':
                     subdomainCounts[subdomain] = subdomainCounts.get(subdomain, 0) + 1
 
                     # print("SUBDOMAIN: ", subdomainCounts)
 
-            # List of found links
+            # List of found links - calls 'extract_next_links(url, resp)' in order to retrieve a set of links from the current webpage
             links = extract_next_links(url, resp)
-            # print(links)
 
             # Links added to set to remove duplicates
             if links is not None:
                 linkSet.update(links)
             else:
                 print("No more links here! Moving on...")
-
-            # print(list(linkSet))
-            # print("LINK LENGTH: ", len(links))
-            # print("Extracted Links:")
-
-            # Find number of UNIQUE PAGES
-            # uniquePages = len(linkSet)
-            # print("Number of Unique Pages: ", uniquePages)
             
-            # Store word count for the current URL; PAGEWORDCOUNTER
+            # Store word count for the current URL
             if resp.raw_response and resp.raw_response.content is not None:
                 content = resp.raw_response.content
                 pageWordCounts[url] = count_words(content)
 
-                # Update WORDCOUNTER for each tokenized word, not including stop words
+                # Update wordCounter for each tokenized word, not including stop words
                 tokens = tokenize(content)
                 for word in tokens:
                     if word.lower() not in stopWords:
-                        wordCounter[word] += 1           
+                        wordCounter[word.lower()] += 1           
         else:
             print(url, " is not a valid URL for crawling.")
     except Exception as e:
         print("Error processing URL: ", url, " ", str(e))
+
         # Find the url of the longest page in terms of words count
     if pageWordCounts:
         longest_page_url = max(pageWordCounts, key=pageWordCounts.get)
-        # print("Longest page URL:", longest_page_url)
-        # print("Number of words:", pageWordCounts[longest_page_url])
+        # print("LONGEST PAGE URL:", longest_page_url)
+        # print("NUMBER OF WORDS:", pageWordCounts[longest_page_url])
 
     # Get the 50 most common words
-    most_common_words = wordCounter.most_common(50)
-    # print("50 most common words:", most_common_words)
+    if wordCounter:
+        most_common_words = wordCounter.most_common(50)
+        # print("50 MOST COMMON WORDS:", most_common_words)
 
     # Print out the counts for each subdomain
-    # sortedSubdomains = dict(sorted(subdomainCounts.items(), key=lambda item: item[0]))
     sorted_subdomains = []
     keys = list(subdomainCounts.keys())
     keys.sort()
 
-    # for key in keys:
-    #     value = subdomainCounts[key]
-    #     sorted_subdomains.append((key, value))
-    
     for key in keys:
         value = subdomainCounts[key]
         full_url = f"https://{key}.uci.edu"
         sorted_subdomains.append((full_url, value))
 
-    # print("Sorted Subdomains: ", sorted_subdomains)
-
-    # print(list(linkSet))
-    # print(len(linkSet))
+    print("SORTED SUBDOMAINS: ", sorted_subdomains)
 
     # returns a list of links
     return list(linkSet)
 
-
+# FUNCTION - extract_next_links(url, resp) - takes the URL of the page we are currently on and parses the page to return only valid links retrieved
 def extract_next_links(url, resp):
     link_list = []
-    # if resp.raw_response is not None:
-    #     if resp.raw_response.content is not None:
 
+    # checks for a successful response status, 200
     if resp.status == 200:
         try:
-            # use BeautifulSoup library to parse the HTML content of the page
-            # print("Raw Content: ", raw)
 
+            # set page content
             content = resp.raw_response.content
-            # print("WORDS: ", count_words(content))
             
-            if count_words(content) < 250:
+            # checks for useless pages with less than 100 words
+            if count_words(content) < 100:
                 print("PAGE TOO SHORT!")
                 return []
 
+            # uses the BeautifulSoup library to parse the HTML of the page
             soup = BeautifulSoup(content, 'html.parser')
-
-            # body_content = soup.body.get_text(strip=True)
-            # if not body_content:
-            #     print("HTML DOES NOT CONTAIN TEXT IN BODY (extract_next_links)")
-            #     return []
 
             # in the HTML, we want to find all '<a>' tags and extract the link, the 'href'
             for curr in soup.find_all('a'):
                 link = curr.get('href')
-                # print(link)
                 if link is not None:
+
                     # we then use 'urllib.parse: urljoin' in order to combine the relative URL's with our base URL in order to get our final URL
                     url_joined = urljoin(url, link)
 
                     # Strip the trailing '/'
                     url_joined = url_joined.rstrip("/")
-                    # print("URL JOINED: ", url_joined)
 
                     # Use 'urllibe.parse: urldefrag' to remove the fragment, as in this assignment we ignore the fragment 
                     if "#" in url_joined:
                         url_joined = urldefrag(url_joined).url
                    
                     final_url  = unquote(url_joined)
-                    # print("FINAL URL", final_url)
 
                     # checks validity of our final_url - if it is valid, then we can add it to our list of links
-
-                    # print(not_similar(final_url))
                     
-                    if is_valid(final_url) and not_similar(final_url):
-                        # https://vision.ics.uci.edu
-                        # https://vision.ics.uci.edu/robots.txt
+                    if is_valid(final_url):
+                        # ATTEMPT AT robots.txt POLITNESS IMPLEMENTATION
 
-                        # https://vision.ics.uci.edu
                         # temp_url = urlparse(final_url)
 
                         # final_url_domain = temp_url.netloc
@@ -270,8 +247,12 @@ def extract_next_links(url, resp):
                         #     allowed = parser.can_fetch(user_agent, robots_url)
                         
                         #     if(allowed):
-                        link_list.append(final_url)
+
+                        # is the URL is valid, add the URL to our set of unique URL's and append it to our list
                         linkSet.add(final_url)
+                        link_list.append(final_url)
+
+                        # for similarity checking function
                         temp = urlparse(final_url)
                         domainSet[final_url] = {
                         "scheme": temp.scheme,
@@ -288,10 +269,8 @@ def extract_next_links(url, resp):
                         # else:
                         #     continue
                     else:
-                        # print("CONTINUING LINE 269")
                         continue
                 else:
-                    # print("CONTINUING LINE 272 - LINK IS NONE")
                     continue
         except Exception as e:
             print("ERROR: Error parsing " + url + " - " + str(e)) 
@@ -301,48 +280,67 @@ def extract_next_links(url, resp):
         print("Error: " + str(resp.status))
         return
 
-    # print("LIST IN EXTRACT: ", link_list)
+    # prints unique page count with each iteration so we can see while our code is running
     print("UNIQUE PAGES - ", len(linkSet))
     return link_list
-
 
 # FUNCTION: is_valid(url) - checks the validity of a URL:str passed in - returns a boolean True or False
 def is_valid(url):
     try:
+        # checks for scheme equivalence
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
 
-        url = unquote(url)
+        # Checks for Trap keywords
+        if not re.match(r'^(\w*.?)(ics.uci.edu|cs.uci.edu|stat.uci.edu|informatics.uci.edu)$',parsed.netloc):
+            return False
+        if "version=" in url:
+            return False
+        if "sidebyside" in url:
+            return False
+        if "policies" in url:
+            return False
+        if "stayconnected" in url:
+            return False
+        if "filter%5B" in url:
+            return False
+        if "filter[" in url:
+            return False
+        if "format=" in url:
+            return False
+        if "pdf" in url:
+            return False
+        if "redirect" in url:
+            return False
+        if "?share=" in url:
+            return False
+        # checks for invalid file types
+        if re.match(
+            r".*\.(css|js|bmp|gif|jpe?g|ico"
+            + r"|png|tiff?|mid|mp2|mp3|mp4"
+            + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
+            + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
+            + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
+            + r"|epub|dll|cnf|tgz|sha1"
+            + r"|thmx|mso|arff|rtf|jar|csv"
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|war|apk|img|mpg|ipynb|ppsx)$", parsed.path.lower()):
+            return False
+        
+        # traps
+        if url == "https://www.stat.uci.edu/covid19/index.html":
+            return False
 
-        # List of disallowed file extensions
-        invalid = [
-            "css", "js", "bmp", "gif", "jpg", "jpeg", "ico",
-            "png", "tif", "tiff", "mid", "mp2", "mp3", "mp4",
-            "wav", "avi", "mov", "mpeg", "ram", "m4v", "mkv", "ogg", "ogv", "pdf",
-            "ps", "eps", "tex", "ppt", "pptx", "doc", "docx", "xls", "xlsx", "names",
-            "data", "dat", "exe", "bz2", "php", "tar", "msi", "bin", "7z", "psd", "dmg", "iso",
-            "epub", "dll", "cnf", "tgz", "sha1", "thmx", "mso", "arff", "rtf", "jar", "csv",
-            "rm", "smil", "wmv", "swf", "wma", "zip", "rar", "gz" , "img", "war", "mpg" , "ipynb" , "ppsx"
-        ]
-
-        # Check if the parsed domain matches any of the allowed domains
-        domain_check = any(parsed.netloc.endswith("." + domain) or parsed.netloc == domain for domain in domains)
-
-        pdf_check = "pdf" not in url.lower()
-
-        # Check if the path doesn't have invalid extensions
-        extension_check = not any(parsed.path.lower().endswith("." + filetype) for filetype in invalid)
-
-        # return the boolean expression determined by the logical AND of domain_match and extension_match
-        # if the url exists in our valid domains and does not fall under any of the invalid extensions, return True, else return False
-        return domain_check and extension_check and pdf_check
+        if "https://wics.ics.uci.edu/events" in url:
+            return False
+        
+        return True
 
     except TypeError:
         print("TypeError for ", parsed)
         raise
 
-
+# FUNCTION: tokenize(content) - turns content from page into tokens to count towards word count
 def tokenize(content):
     # Strip HTML markup
     soup = BeautifulSoup(content, 'html.parser')
@@ -359,7 +357,7 @@ def tokenize(content):
 
     return cleanTokens
 
-
+# FUNCTION: count_words(content) - counts words
 def count_words(content):
     # Parse HTML markup
     soup = BeautifulSoup(content, 'html.parser')
@@ -372,26 +370,18 @@ def count_words(content):
     newContent = soup.get_text()
 
     # Use regex to count the number of words in the content
-    words = re.findall(r'\w+', newContent)
+    words = [word for word in re.findall(r'\w+', newContent) if not word.isnumeric()]
     return len(words)
 
+# FUNCTION - print_deliverables() - prints delivarables for our output
+def print_deliverables():
+    if linkSet:
+        print("NUMBER OF UNIQUE PAGES - ", len(linkSet))
 
-def not_similar(url):
-    parsed = urlparse(url)
-    query_similarity = 0
-
-    for stored_url, components in domainSet.items():
-        domain_similarity = SequenceMatcher(None, parsed.netloc, components["netloc"]).ratio()
-        path_similarity = SequenceMatcher(None, parsed.path, components["path"]).ratio()
-        if domain_similarity == 1 and path_similarity > 0.6: 
-            return False
-        if parsed.netloc == components["netloc"] and parsed.path == components["path"]:
-            query_similarity = SequenceMatcher(None, parsed.query, components["query"]).ratio()
-            
-            if query_similarity >= 0.7:
-                # If at least one item in domainSet has similar query, return False
-                return False
-        
-
-    # If the loop finishes and no similar query was found, return True
-    return True
+    if pageWordCounts:
+        longest_page_url = max(pageWordCounts, key=pageWordCounts.get)
+        print("LONGEST PAGE URL - ", longest_page_url, " - WITH WORD COUNT: - ", pageWordCounts[longest_page_url])
+    
+    if wordCounter:
+        most_common_words = wordCounter.most_common(50)
+        print("50 MOST COMMON WORDS:", most_common_words)
