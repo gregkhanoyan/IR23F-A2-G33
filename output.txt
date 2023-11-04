@@ -1,0 +1,13 @@
+UNIQUE PAGES -  178460
+LONGEST PAGE URL - https://www.informatics.uci.edu/explore/books-we-have-written/ - WITH WORD COUNT: - 10634
+50 MOST COMMON WORDS: [('research', 109371), ('ics', 79835), ('science', 69193), ('computer', 68610), ('student', 62114), 
+                       ('learning', 59575), ('undergraduate', 54918), ('graduate', 53409), ('informatics', 43021), ('news', 37173), 
+                       ('data', 36275), ('community', 35509), ('alumni', 34849), ('students', 32771), ('systems', 32631), ('statistics', 32280), 
+                       ('machine', 31950), ('programs', 30797), ('software', 30757), ('uci', 30510), ('faculty', 30181), ('computing', 27836), ('view', 27309),
+                        ('information', 27295), ('2023', 26397), ('spotlights', 25833), ('future', 23758), ('school', 23610), ('events', 23262), ('bren', 22907), 
+                        ('donald', 22481), ('corporate', 21717), ('health', 21556), ('honors', 21351), ('academic', 19645), ('accessible', 18105), ('genomics', 17849), 
+                        ('irvine', 17723), ('involved', 17377), ('follow', 17332), ('hall', 16466), ('staff', 16292), ('search', 16090), ('projects', 15901), ('policy', 15867), 
+                        ('tech', 15807), ('engineering', 15692), ('awards', 15179), ('intelligent', 15048), ('connected', 14992)] 
+SORTED SUBDOMAINS: {'aiclub': 3, 'archive': 544, 'create': 7, 'datalab': 1, 'dgillen': 25, 'graphics': 8, 
+                    'jgarcia': 12, 'keys': 1, 'ngs': 938, 'sdcl': 41, 'seal': 41, 'statconsulting': 1, 'studentcouncil': 24,
+                    'support': 1, 'swiki': 2, 'transformativeplay': 22, 'vision': 10}
